@@ -1,0 +1,10 @@
+[package]
+name = "countdown"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+chrono = "0.4.35"
+chrono-tz = "0.8.6"
+clap = { version = "4.5.3", features = ["derive"] }
+iana-time-zone = "0.1.60"

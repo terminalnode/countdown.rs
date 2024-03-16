@@ -1,7 +1,7 @@
 use std::process::exit;
 use std::str::FromStr;
 
-use chrono::{Local, NaiveDate, NaiveDateTime, NaiveTime};
+use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, NaiveTime};
 use chrono_tz::Tz;
 use clap::Parser;
 use iana_time_zone::get_timezone;
@@ -42,20 +42,29 @@ fn main() {
 
 fn run() -> Result<String, String> {
     let args = Args::parse();
+    let target = get_target(&args)?;
+    get_time_from_now(target, args.verbose)
+}
+
+fn get_target(args: &Args) -> Result<DateTime<Tz>, String> {
     let now = Local::now();
-    let zone = match args.zone {
-        Some(tz) => tz,
-        None => {
-            let raw = get_timezone().or_else(|_| Err("Failed to get system timezone".to_string()))?;
-            Tz::from_str(&raw).or_else(|_| Err(format!("Failed to parse timezone {}", &raw)))?
-        }
-    };
+    let date = args.date.unwrap_or_else(|| now.date_naive());
+    let time = args.time.unwrap_or_else(|| now.time());
+    let zone = args.zone.map(Ok).unwrap_or_else(get_system_timezone)?;
 
-    let target = NaiveDateTime::new(
-        args.date.unwrap_or_else(|| now.date_naive()),
-        args.time.unwrap_or_else(|| now.time()),
-    ).and_local_timezone(zone).unwrap();
+    Ok(NaiveDateTime::new(date, time)
+        .and_local_timezone(zone)
+        .unwrap())
+}
 
+fn get_system_timezone() -> Result<Tz, String> {
+    get_timezone()
+        .or_else(|_| Err("Failed to get system timezone".to_string()))
+        .and_then(|tz| Tz::from_str(&tz).or_else(|_| Err(format!("Failed to parse timezone {tz}"))))
+}
+
+fn get_time_from_now(target: DateTime<Tz>, verbose: bool) -> Result<String, String> {
+    let now = Local::now();
     let mut seconds = target.signed_duration_since(now).num_seconds();
     let days = seconds / 86400;
     seconds %= 86400;
@@ -65,12 +74,11 @@ fn run() -> Result<String, String> {
     seconds %= 60;
 
     let remaining = format!("{days} days {hours:02}:{minutes:02}:{seconds:02}");
-    let out = if args.verbose {
+    Ok(if verbose {
         let now = now.format("Now:    %Y-%m-%d %H:%M:%S (%Z)");
         let target = target.format("Target: %Y-%m-%d %H:%M:%S (%Z)");
         format!("{now}\n{target}\n{remaining}")
     } else {
         remaining
-    };
-    Ok(out)
+    })
 }

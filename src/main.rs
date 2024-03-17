@@ -35,8 +35,23 @@ struct Args {
 }
 
 struct TimeFromNow {
-    formatted: String,
+    time_remaining: String,
+    time_now: String,
+    time_target: String,
     millis: u64,
+}
+
+impl TimeFromNow {
+    fn formatted(&self, verbose: bool) -> String {
+        if verbose {
+            format!(
+                "{}\n{}\n{}",
+                self.time_now, self.time_target, self.time_remaining
+            )
+        } else {
+            self.time_remaining.clone()
+        }
+    }
 }
 
 fn main() {
@@ -54,14 +69,16 @@ fn run() -> Result<(), String> {
     let target = get_target(&args)?;
 
     if args.continuous {
+        let mut first = true;
         loop {
-            let remaining = get_time_from_now(target, args.verbose)?;
-            println!("{}", remaining.formatted);
+            let remaining = get_time_from_now(target)?;
+            println!("{}", remaining.formatted(args.verbose && first));
+            first = false;
             sleep(Duration::from_millis(remaining.millis));
         }
     } else {
-        let remaining = get_time_from_now(target, args.verbose)?;
-        println!("{}", remaining.formatted);
+        let remaining = get_time_from_now(target)?;
+        println!("{}", remaining.formatted(args.verbose));
     }
 
     Ok(())
@@ -84,7 +101,7 @@ fn get_system_timezone() -> Result<Tz, String> {
         .and_then(|tz| Tz::from_str(&tz).or_else(|_| Err(format!("Failed to parse timezone {tz}"))))
 }
 
-fn get_time_from_now(target: DateTime<Tz>, verbose: bool) -> Result<TimeFromNow, String> {
+fn get_time_from_now(target: DateTime<Tz>) -> Result<TimeFromNow, String> {
     let now = Local::now();
     let signed_millis = target.signed_duration_since(now).num_milliseconds();
     let sign = if signed_millis < 0 { "-" } else { "" };
@@ -95,15 +112,6 @@ fn get_time_from_now(target: DateTime<Tz>, verbose: bool) -> Result<TimeFromNow,
     let (minutes, millis) = (millis / 60_000, millis % 60_000);
     let (seconds, millis) = (millis / 1_000, millis % 1_000);
 
-    let remaining = format!("{sign}{days} days {hours:02}:{minutes:02}:{seconds:02}");
-    let formatted = if verbose {
-        let now = now.format("Now:    %Y-%m-%d %H:%M:%S (%Z)");
-        let target = target.format("Target: %Y-%m-%d %H:%M:%S (%Z)");
-        format!("{now}\n{target}\n{remaining}")
-    } else {
-        remaining
-    };
-
     // If we don't add +1 to millis the sleep time is too short,
     // and we will print the same time many times over.
     let millis = if signed_millis < 0 {
@@ -112,5 +120,10 @@ fn get_time_from_now(target: DateTime<Tz>, verbose: bool) -> Result<TimeFromNow,
         max(0, millis + 1)
     } as u64;
 
-    Ok(TimeFromNow { formatted, millis })
+    Ok(TimeFromNow {
+        time_remaining: format!("{sign}{days} days {hours:02}:{minutes:02}:{seconds:02}"),
+        time_now: now.format("Now:    %Y-%m-%d %H:%M:%S (%Z)").to_string(),
+        time_target: target.format("Target: %Y-%m-%d %H:%M:%S (%Z)").to_string(),
+        millis,
+    })
 }

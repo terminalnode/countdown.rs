@@ -1,3 +1,6 @@
+![cargo build](https://github.com/terminalnode/countdown.rs/actions/workflows/cargo-build.yml/badge.svg)
+![cargo fmt](https://github.com/terminalnode/countdown.rs/actions/workflows/cargo-fmt.yml/badge.svg)
+
 # countdown.rs
 Ever wanted to know how many days hours:minutes:seconds are left until a certain date and time?
 Look no further, the solution is here! This is a simple Rust program that does just that.

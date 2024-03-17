@@ -11,10 +11,10 @@ Just build the program with `cargo build -r`, then move the resulting binary fro
 
 ## Usage
 ```
-> countdown -V
-countdown 0.2.0
+$ countdown -V
+countdown 0.2.1
 
-> countdown -h
+$ countdown -h
 Calculate the time between now and a specified target time
 
 Usage: countdown [OPTIONS]
@@ -28,24 +28,22 @@ Options:
   -h, --help               Print help
   -V, --version            Print version
 
-> countdown -d 2024-03-23 -t 10:00
-5 days 21:36:46
+$ countdown -d 2024-03-23 -t 10:00
+5 days 15:13:08
 
-> countdown -d 2024-03-23 -t 10:00 -v
-Now:    2024-03-17 12:23:18 (+01:00)
+$ countdown -d 2024-03-23 -t 10:00 -v
+Now:    2024-03-17 18:46:55 (+01:00)
 Target: 2024-03-23 10:00:00 (CET)
-5 days 21:36:41
+5 days 15:13:04
 
-> countdown -d 2024-03-13 -t 13:20 -v
-Now:    2024-03-17 12:23:26 (+01:00)
-Target: 2024-03-13 13:20:00 (CET)
--3 days 23:03:26
-
-> countdown -d 2024-03-23 -t 10:00 -c
-5 days 21:36:23
-5 days 21:36:22
-5 days 21:36:21
-5 days 21:36:20
-5 days 21:36:19
-5 days 21:36:18
+$ countdown -d 2024-03-23 -t 10:00 -cv
+Now:    2024-03-17 18:47:03 (+01:00)
+Target: 2024-03-23 10:00:00 (CET)
+5 days 15:12:56
+5 days 15:12:55
+5 days 15:12:54
+5 days 15:12:53
+5 days 15:12:52
+5 days 15:12:51
+5 days 15:12:50
 ```

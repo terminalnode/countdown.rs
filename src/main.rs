@@ -6,9 +6,9 @@ use chrono_tz::Tz;
 use clap::Parser;
 use iana_time_zone::get_timezone;
 
-/// Simple program to calculate the time until a target specified target time
+/// Calculate the time between now and a specified target time
 #[derive(Parser, Debug)]
-#[command(version, about)]
+#[command(name = "countdown", version, about)]
 struct Args {
     /// The date to use for the target time [default: current local date]
     #[arg(short = 'd', long = "date", value_name = "YYYY-mm-dd")]
@@ -66,14 +66,14 @@ fn get_system_timezone() -> Result<Tz, String> {
 fn get_time_from_now(target: DateTime<Tz>, verbose: bool) -> Result<String, String> {
     let now = Local::now();
     let mut seconds = target.signed_duration_since(now).num_seconds();
-    let days = seconds / 86400;
-    seconds %= 86400;
-    let hours = seconds / 3600;
-    seconds %= 3600;
-    let minutes = seconds / 60;
-    seconds %= 60;
+    let sign = if seconds < 0 { "-" } else { "" };
+    seconds = seconds.abs();
 
-    let remaining = format!("{days} days {hours:02}:{minutes:02}:{seconds:02}");
+    let (days, seconds) = (seconds / 86400, (seconds % 86400));
+    let (hours, seconds) = (seconds / 3600, seconds % 3600);
+    let (minutes, seconds) = (seconds / 60, seconds % 60);
+
+    let remaining = format!("{sign}{days} days {hours:02}:{minutes:02}:{seconds:02}");
     Ok(if verbose {
         let now = now.format("Now:    %Y-%m-%d %H:%M:%S (%Z)");
         let target = target.format("Target: %Y-%m-%d %H:%M:%S (%Z)");

@@ -1,5 +1,8 @@
+use std::cmp::max;
 use std::process::exit;
 use std::str::FromStr;
+use std::thread::sleep;
+use std::time::Duration;
 
 use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, NaiveTime};
 use chrono_tz::Tz;
@@ -25,14 +28,20 @@ struct Args {
     /// If set, print current time and target time above the remaining time
     #[arg(short = 'v', long = "verbose")]
     verbose: bool,
+
+    /// If set, print the remaining time every second
+    #[arg(short = 'c', long = "continuous")]
+    continuous: bool,
+}
+
+struct TimeFromNow {
+    formatted: String,
+    millis: u64,
 }
 
 fn main() {
     match run() {
-        Ok(output) => {
-            println!("{}", output);
-            exit(0);
-        }
+        Ok(_) => exit(0),
         Err(error) => {
             eprintln!("Error:\n{}", error);
             exit(1);
@@ -40,10 +49,22 @@ fn main() {
     }
 }
 
-fn run() -> Result<String, String> {
+fn run() -> Result<(), String> {
     let args = Args::parse();
     let target = get_target(&args)?;
-    get_time_from_now(target, args.verbose)
+
+    if args.continuous {
+        loop {
+            let remaining = get_time_from_now(target, args.verbose)?;
+            println!("{}", remaining.formatted);
+            sleep(Duration::from_millis(remaining.millis));
+        }
+    } else {
+        let remaining = get_time_from_now(target, args.verbose)?;
+        println!("{}", remaining.formatted);
+    }
+
+    Ok(())
 }
 
 fn get_target(args: &Args) -> Result<DateTime<Tz>, String> {
@@ -63,22 +84,33 @@ fn get_system_timezone() -> Result<Tz, String> {
         .and_then(|tz| Tz::from_str(&tz).or_else(|_| Err(format!("Failed to parse timezone {tz}"))))
 }
 
-fn get_time_from_now(target: DateTime<Tz>, verbose: bool) -> Result<String, String> {
+fn get_time_from_now(target: DateTime<Tz>, verbose: bool) -> Result<TimeFromNow, String> {
     let now = Local::now();
-    let mut seconds = target.signed_duration_since(now).num_seconds();
-    let sign = if seconds < 0 { "-" } else { "" };
-    seconds = seconds.abs();
+    let signed_millis = target.signed_duration_since(now).num_milliseconds();
+    let sign = if signed_millis < 0 { "-" } else { "" };
+    let millis = signed_millis.abs();
 
-    let (days, seconds) = (seconds / 86400, (seconds % 86400));
-    let (hours, seconds) = (seconds / 3600, seconds % 3600);
-    let (minutes, seconds) = (seconds / 60, seconds % 60);
+    let (days, millis) = (millis / 86_400_000, millis % 86_400_000);
+    let (hours, millis) = (millis / 3_600_000, millis % 3_600_000);
+    let (minutes, millis) = (millis / 60_000, millis % 60_000);
+    let (seconds, millis) = (millis / 1_000, millis % 1_000);
 
     let remaining = format!("{sign}{days} days {hours:02}:{minutes:02}:{seconds:02}");
-    Ok(if verbose {
+    let formatted = if verbose {
         let now = now.format("Now:    %Y-%m-%d %H:%M:%S (%Z)");
         let target = target.format("Target: %Y-%m-%d %H:%M:%S (%Z)");
         format!("{now}\n{target}\n{remaining}")
     } else {
         remaining
-    })
+    };
+
+    // If we don't add +1 to millis the sleep time is too short,
+    // and we will print the same time many times over.
+    let millis = if signed_millis < 0 {
+        max(0, 1000 - millis)
+    } else {
+        max(0, millis + 1)
+    } as u64;
+
+    Ok(TimeFromNow { formatted, millis })
 }

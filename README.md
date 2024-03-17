@@ -1,3 +1,6 @@
+![cargo build](https://github.com/terminalnode/countdown.rs/actions/workflows/cargo-build.yml/badge.svg)
+![cargo fmt](https://github.com/terminalnode/countdown.rs/actions/workflows/cargo-fmt.yml/badge.svg)
+
 # countdown.rs
 Ever wanted to know how many days hours:minutes:seconds are left until a certain date and time?
 Look no further, the solution is here! This is a simple Rust program that does just that.
@@ -8,7 +11,7 @@ Just build the program with `cargo build -r`, then move the resulting binary fro
 
 ## Usage
 ```
-`$ countdown -V
+$ countdown -V
 countdown 0.1.1
 
 $ countdown -h
@@ -24,10 +27,10 @@ Options:
   -h, --help               Print help
   -V, --version            Print version
 
-$ countdown -d '2024-03-23' -t '10:00'
+$ countdown -d 2024-03-23 -t 10:00
 5 days 23:42:03
 
-$ countdown -d '2024-03-23' -t '10:00' -v
+$ countdown -d 2024-03-23 -t 10:00 -v
 Now:    2024-03-17 10:18:00 (+01:00)
 Target: 2024-03-23 10:00:00 (CET)
 5 days 23:41:59

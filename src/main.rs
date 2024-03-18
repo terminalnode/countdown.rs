@@ -1,4 +1,5 @@
 use std::cmp::max;
+use std::io::stdout;
 use std::process::exit;
 use std::str::FromStr;
 use std::thread::sleep;
@@ -7,6 +8,10 @@ use std::time::Duration;
 use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, NaiveTime};
 use chrono_tz::Tz;
 use clap::Parser;
+use crossterm::cursor::MoveLeft;
+use crossterm::execute;
+use crossterm::style::Print;
+use crossterm::terminal::{Clear, ClearType};
 use iana_time_zone::get_timezone;
 
 /// Calculate the time between now and a specified target time
@@ -32,6 +37,10 @@ struct Args {
     /// If set, print the remaining time every second
     #[arg(short = 'c', long = "continuous")]
     continuous: bool,
+
+    /// If set in combination with -c / --continuous, overwrite the previous line instead of printing a new line
+    #[arg(short = 'o', long = "overwrite")]
+    overwrite: bool,
 }
 
 struct TimeFromNow {
@@ -70,10 +79,27 @@ fn run() -> Result<(), String> {
 
     if args.continuous {
         let mut first = true;
+
         loop {
             let remaining = get_time_from_now(target)?;
-            println!("{}", remaining.formatted(args.verbose && first));
-            first = false;
+            let formatted = remaining.formatted(args.verbose && first);
+
+            if args.overwrite && !first {
+                let execution = execute!(
+                    stdout(),
+                    Clear(ClearType::CurrentLine),
+                    MoveLeft(100),
+                    Print(formatted),
+                );
+                execution.or_else(|x| Err(x.to_string()))?;
+            } else {
+                if args.overwrite {
+                    execute!(stdout(), Print(formatted)).or_else(|x| Err(x.to_string()))?;
+                } else {
+                    println!("{}", formatted);
+                }
+                first = false;
+            };
             sleep(Duration::from_millis(remaining.millis));
         }
     } else {
@@ -107,10 +133,10 @@ fn get_time_from_now(target: DateTime<Tz>) -> Result<TimeFromNow, String> {
     let sign = if signed_millis < 0 { "-" } else { "" };
     let millis = signed_millis.abs();
 
-    let (days, millis) = (millis / 86_400_000, millis % 86_400_000);
-    let (hours, millis) = (millis / 3_600_000, millis % 3_600_000);
-    let (minutes, millis) = (millis / 60_000, millis % 60_000);
-    let (seconds, millis) = (millis / 1_000, millis % 1_000);
+    let (days, millis) = divmod(millis, 86_400_000);
+    let (hours, millis) = divmod(millis, 3_600_000);
+    let (minutes, millis) = divmod(millis, 60_000);
+    let (seconds, millis) = divmod(millis, 1_000);
 
     // If we don't add +1 to millis the sleep time is too short,
     // and we will print the same time many times over.
@@ -126,4 +152,9 @@ fn get_time_from_now(target: DateTime<Tz>) -> Result<TimeFromNow, String> {
         time_target: target.format("Target: %Y-%m-%d %H:%M:%S (%Z)").to_string(),
         millis,
     })
+}
+
+/// Return the quotient and remainder of the division of dividend by divisor
+fn divmod(dividend: i64, divisor: i64) -> (i64, i64) {
+    (dividend / divisor, dividend % divisor)
 }
